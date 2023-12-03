@@ -1,7 +1,9 @@
 package com.github.redreaperlp.socketapi.communication;
 
 import com.github.redreaperlp.socketapi.NetInstance;
+import com.github.redreaperlp.socketapi.client.SocketClient;
 import com.github.redreaperlp.socketapi.communication.request.Request;
+import com.github.redreaperlp.socketapi.communication.request.requests.RequestPing;
 import com.github.redreaperlp.socketapi.communication.request.special.RequestPromising;
 import com.github.redreaperlp.socketapi.communication.response.Response;
 import org.json.JSONObject;
@@ -19,6 +21,7 @@ public abstract class Connection {
     private Thread incomingThread;
     private Thread outgoingThread;
     private Thread timeoutThread;
+    private Thread pingThread;
     private final RequestManager requestManager;
     public final List<RequestPromising> pendingResponses = new ArrayList<>();
     private final List<Request> requestQueue = new ArrayList<>();
@@ -58,6 +61,7 @@ public abstract class Connection {
             if (incomingThread != null && incomingThread.isAlive()) incomingThread.interrupt();
             if (outgoingThread != null && outgoingThread.isAlive()) outgoingThread.interrupt();
             if (timeoutThread != null && timeoutThread.isAlive()) timeoutThread.interrupt();
+            if (pingThread != null && pingThread.isAlive()) pingThread.interrupt();
             if (socket.isClosed()) return;
             socket.close();
         } catch (IOException | InterruptedException e) {
@@ -75,7 +79,10 @@ public abstract class Connection {
                         resolve(jsonObject);
                     }
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    if (netInstance instanceof SocketClient client) {
+                        client.restart();
+                    }
+                    break;
                 }
             }
         });
@@ -114,6 +121,9 @@ public abstract class Connection {
                         writer.newLine();
                         writer.flush();
                     } catch (IOException e) {
+                        if (netInstance instanceof SocketClient client) {
+                            client.restart();
+                        }
                         throw new RuntimeException(e);
                     }
                 }
@@ -156,7 +166,7 @@ public abstract class Connection {
                     try {
                         pendingResponses.wait();
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        System.out.println("Timeout thread interrupted");
                     }
                 }
             }
@@ -165,7 +175,14 @@ public abstract class Connection {
         timeoutThread.start();
     }
 
+    public void ping() {
+        pingThread = new Thread(this::pingLoop);
+        pingThread.setName("Ping Loop");
+        pingThread.start();
+    }
+
     private void resolve(JSONObject jsonObject) {
+        System.out.println("Received " + jsonObject);
         if (jsonObject.has("type")) {
             if (jsonObject.getString("type").equals("response")) {
                 JSONObject response = jsonObject.getJSONObject("data");
@@ -185,13 +202,23 @@ public abstract class Connection {
                 }
             } else {
                 String type = jsonObject.getString("type");
-                Request s = getRequestManager().getRequest(type, jsonObject.getLong("id"));
-                if (s instanceof RequestPromising promising) {
-                    if (jsonObject.has("data")) {
-                        promising.setData(jsonObject.getJSONObject("data"));
+                if (!jsonObject.has("id")) {
+                    Request r = getRequestManager().getRequest(type);
+                    switch (type) {
+                        case "disconnect":
+                            System.out.println("Received disconnect request");
+                            end();
+                            break;
                     }
-                    promising.validateRequest();
-                    promising.getResponse().queue();
+                } else {
+                    Request s = getRequestManager().getRequest(type, jsonObject.getLong("id"));
+                    if (s instanceof RequestPromising promising) {
+                        if (jsonObject.has("data")) {
+                            promising.setData(jsonObject.getJSONObject("data"));
+                        }
+                        promising.validateRequest();
+                        promising.getResponse().queue();
+                    }
                 }
             }
         } else {
@@ -230,6 +257,17 @@ public abstract class Connection {
         synchronized (requestQueue) {
             requestQueue.add(0, request);
             requestQueue.notifyAll();
+        }
+    }
+
+    private void pingLoop() {
+        try {
+            while (!pingThread.isInterrupted()) {
+                Thread.sleep(3000);
+                requestManager.getRequest(RequestPing.class).complete();
+            }
+        } catch (InterruptedException e) {
+            System.out.println("Ping thread interrupted");
         }
     }
 }

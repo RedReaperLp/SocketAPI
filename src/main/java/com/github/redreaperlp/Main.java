@@ -1,10 +1,10 @@
 package com.github.redreaperlp;
 
-import com.github.redreaperlp.socketapi.client.Client;
+import com.github.redreaperlp.socketapi.client.SocketClient;
 import com.github.redreaperlp.socketapi.communication.RequestManager;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestPing;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestRegister;
-import com.github.redreaperlp.socketapi.server.Server;
+import com.github.redreaperlp.socketapi.server.SocketServer;
 import com.github.redreaperlp.test.GameConnection;
 import com.github.redreaperlp.test.LobbyConnection;
 
@@ -16,15 +16,15 @@ public class Main {
         if (args.length > 0) {
             switch (args[0]){
                 case "server" -> {
-                    Server server = new Server(800);
-                    server.registerCustomConnectionClass("game", GameConnection.class);
-                    server.registerCustomConnectionClass("lobby", LobbyConnection.class);
-                    server.start();
+                    SocketServer socketServer = new SocketServer(800);
+                    socketServer.registerCustomConnectionClass("game", GameConnection.class);
+                    socketServer.registerCustomConnectionClass("lobby", LobbyConnection.class);
+                    socketServer.start();
                 }
                 case "client" -> {
-                    Client client = new Client("localhost", 800);
-                    client.setConnectionIdentifier("lobby");
-                    client.start();
+                    SocketClient socketClient = new SocketClient("localhost", 800);
+                    socketClient.setConnectionIdentifier("lobby");
+                    socketClient.start();
                 }
             }
         }
