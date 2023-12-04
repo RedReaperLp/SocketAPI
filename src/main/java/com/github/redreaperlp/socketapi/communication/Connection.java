@@ -1,7 +1,9 @@
 package com.github.redreaperlp.socketapi.communication;
 
 import com.github.redreaperlp.socketapi.NetInstance;
+import com.github.redreaperlp.socketapi.client.SocketClient;
 import com.github.redreaperlp.socketapi.communication.request.Request;
+import com.github.redreaperlp.socketapi.communication.request.requests.RequestPing;
 import com.github.redreaperlp.socketapi.communication.request.special.RequestPromising;
 import com.github.redreaperlp.socketapi.communication.response.Response;
 import org.json.JSONObject;
@@ -19,6 +21,7 @@ public abstract class Connection {
     private Thread incomingThread;
     private Thread outgoingThread;
     private Thread timeoutThread;
+    private Thread pingThread;
     private final RequestManager requestManager;
     public final List<RequestPromising> pendingResponses = new ArrayList<>();
     private final List<Request> requestQueue = new ArrayList<>();
@@ -52,15 +55,20 @@ public abstract class Connection {
         System.out.println(requestQueue.size() + " requests left in queue");
         try {
             if (!requestQueue.isEmpty()) {
-                System.out.println("Waiting for " + requestQueue.size() + " requests to be sent");
-                Thread.sleep(1000);
+                for (Request request : requestQueue) {
+                    if (request instanceof RequestPromising promising) {
+                        promising.failed(408);
+                        promising.done();
+                    }
+                }
             }
+            if (pingThread != null && pingThread.isAlive()) pingThread.interrupt();
             if (incomingThread != null && incomingThread.isAlive()) incomingThread.interrupt();
             if (outgoingThread != null && outgoingThread.isAlive()) outgoingThread.interrupt();
             if (timeoutThread != null && timeoutThread.isAlive()) timeoutThread.interrupt();
             if (socket.isClosed()) return;
             socket.close();
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
@@ -75,7 +83,9 @@ public abstract class Connection {
                         resolve(jsonObject);
                     }
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    connectionError();
+                    System.out.println("Incoming thread interrupted");
+                    return;
                 }
             }
         });
@@ -114,7 +124,9 @@ public abstract class Connection {
                         writer.newLine();
                         writer.flush();
                     } catch (IOException e) {
-                        throw new RuntimeException(e);
+                        connectionError();
+                        System.out.println("Outgoing thread interrupted");
+                        return;
                     }
                 }
                 synchronized (requestQueue) {
@@ -122,6 +134,7 @@ public abstract class Connection {
                         requestQueue.wait();
                     } catch (InterruptedException e) {
                         System.out.println("Outgoing thread interrupted");
+                        return;
                     }
                 }
             }
@@ -149,20 +162,46 @@ public abstract class Connection {
                     try {
                         Thread.sleep(1000);
                     } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
+                        System.out.println("Timeout thread interrupted");
+                        return;
                     }
                 }
                 synchronized (pendingResponses) {
                     try {
                         pendingResponses.wait();
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        System.out.println("Timeout thread interrupted");
+                        return;
                     }
                 }
             }
         });
         timeoutThread.setName("Timeout Listener");
         timeoutThread.start();
+    }
+
+    public void connectionError() {
+        if (netInstance instanceof SocketClient client) {
+            synchronized (client.getConnectionError()) {
+                client.getConnectionError().notifyAll();
+            }
+        }
+    }
+
+    public void ping() {
+        pingThread = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    System.out.println("Ping thread interrupted");
+                    return;
+                }
+                getRequestManager().getRequest(RequestPing.class).complete();
+            }
+        });
+        pingThread.setName("Ping Thread");
+        pingThread.start();
     }
 
     private void resolve(JSONObject jsonObject) {

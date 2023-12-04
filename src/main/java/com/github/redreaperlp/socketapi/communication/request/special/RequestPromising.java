@@ -11,6 +11,7 @@ public abstract class RequestPromising implements Request {
     private JSONObject data;
     private long id;
     private long timeSent;
+    private long timeReceived;
     private final Object lock = new Object();
     private int failed = 200;
     private boolean isResponding = false;
@@ -24,6 +25,7 @@ public abstract class RequestPromising implements Request {
         synchronized (lock) {
             try {
                 lock.wait();
+                timeReceived = System.currentTimeMillis();
                 System.out.println("Request " + getType() + " responded after " + (System.currentTimeMillis() - getTimeSent()) + "ms (id: " + getId() + ")");
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -98,6 +100,10 @@ public abstract class RequestPromising implements Request {
 
     public long getTimeSent() {
         return timeSent;
+    }
+
+    public long getLatency() {
+        return timeReceived - timeSent;
     }
 
     public void setTimeSent(long timeSent) {

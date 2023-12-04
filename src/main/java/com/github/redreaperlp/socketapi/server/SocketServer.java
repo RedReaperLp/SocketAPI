@@ -15,7 +15,7 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Server implements NetInstance {
+public class SocketServer implements NetInstance {
     private int port;
     private Thread incomingThread;
     private final Map<String, Class<? extends Connection>> customConnectionClasses = new HashMap<>();
@@ -26,7 +26,7 @@ public class Server implements NetInstance {
         }
     }
 
-    public Server(int port) {
+    public SocketServer(int port) {
         this.port = port;
     }
 
