@@ -1,7 +1,7 @@
 package com.github.redreaperlp.socketapi.communication.request.requests;
 
 import com.github.redreaperlp.socketapi.communication.request.special.RequestPromising;
-import com.github.redreaperlp.socketapi.server.SocketServer;
+import com.github.redreaperlp.socketapi.server.Server;
 import org.json.JSONObject;
 
 public class RequestRegister extends RequestPromising {
@@ -29,13 +29,13 @@ public class RequestRegister extends RequestPromising {
 
     @Override
     public void validateRequest() {
-        SocketServer socketServer = (SocketServer) getManager().getNetInstance();
+        Server server = (Server) getManager().getNetInstance();
         if (getData() == null) {
             setResponse(new JSONObject().put("success", false).put("reason", "no data"), 400);
             return;
         }
-        if (!socketServer.getRegisteredConnectionClasses().isEmpty()) {
-            if (!socketServer.hasIdentifier(getData().get("identifier").toString())) {
+        if (!server.getRegisteredConnectionClasses().isEmpty()) {
+            if (!server.hasIdentifier(getData().get("identifier").toString())) {
                 setResponse(new JSONObject().put("success", false).put("reason", "identifier not found"), 404);
             }
         }
