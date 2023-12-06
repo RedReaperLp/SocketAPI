@@ -3,6 +3,7 @@ package com.github.redreaperlp.socketapi.server;
 import com.github.redreaperlp.socketapi.NetInstance;
 import com.github.redreaperlp.socketapi.communication.Connection;
 import com.github.redreaperlp.socketapi.communication.ConnectionImpl;
+import com.github.redreaperlp.socketapi.communication.handler.RequestHandler;
 import com.github.redreaperlp.socketapi.communication.response.Response;
 import org.json.JSONObject;
 
@@ -18,8 +19,17 @@ import java.util.Map;
 public class SocketServer implements NetInstance {
     private int port;
     private Thread incomingThread;
+    private RequestHandler requestHandler = new RequestHandler();
     private final Map<String, Class<? extends Connection>> customConnectionClasses = new HashMap<>();
 
+    /**
+     * Registers a custom connection class
+     *
+     * @param name  The identifier
+     * @param clazz The class
+     * @apiNote This is used to identify the connection and differentiate
+     * between them to have different actions for each connection
+     */
     public void registerCustomConnectionClass(String name, Class<? extends Connection> clazz) {
         if (!customConnectionClasses.containsKey(name)) {
             customConnectionClasses.put(name, clazz);
@@ -30,6 +40,9 @@ public class SocketServer implements NetInstance {
         this.port = port;
     }
 
+    /**
+     * Starts the server and listens for incoming connections
+     */
     public void start() {
         incomingThread = new Thread(() -> {
             ServerSocket serverSocket;
@@ -99,14 +112,25 @@ public class SocketServer implements NetInstance {
             }
         });
         incomingThread.start();
+    }
 
+    /**
+     * Gets the request handler
+     *
+     * @return The request handler
+     * @apiNote The request handler is used to register requests and handle/modifiy them
+     */
+    public RequestHandler getRequestHandler() {
+        return requestHandler;
     }
 
     public boolean hasIdentifier(String identifier) {
         return customConnectionClasses.containsKey(identifier);
     }
 
+
     public Map<String, Class<? extends Connection>> getRegisteredConnectionClasses() {
         return customConnectionClasses;
     }
+
 }

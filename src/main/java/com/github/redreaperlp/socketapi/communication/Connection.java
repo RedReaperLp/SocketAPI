@@ -6,6 +6,7 @@ import com.github.redreaperlp.socketapi.communication.request.Request;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestPing;
 import com.github.redreaperlp.socketapi.communication.request.special.RequestPromising;
 import com.github.redreaperlp.socketapi.communication.response.Response;
+import com.github.redreaperlp.socketapi.server.SocketServer;
 import org.json.JSONObject;
 
 import java.io.*;
@@ -207,15 +208,15 @@ public abstract class Connection {
     private void resolve(JSONObject jsonObject) {
         if (jsonObject.has("type")) {
             if (jsonObject.getString("type").equals("response")) {
-                JSONObject response = jsonObject.getJSONObject("data");
-                long id = response.getLong("id");
+                JSONObject data = jsonObject.getJSONObject("data");
+                long id = data.getLong("id");
                 RequestPromising toRem = null;
                 synchronized (pendingResponses) {
                     for (RequestPromising promising : pendingResponses) {
                         if (promising.getId() == id) {
-                            promising.setResponse(response);
-                            promising.valudateResponse();
-                            promising.finalizeAll();
+                            netInstance.getRequestHandler().handleRequest(promising, data);
+                            promising.setResponse(data == null ? new JSONObject() : data);
+                            promising.validateResponse();
                             promising.done();
                             toRem = promising;
                         }
@@ -226,9 +227,7 @@ public abstract class Connection {
                 String type = jsonObject.getString("type");
                 Request s = getRequestManager().getRequest(type, jsonObject.getLong("id"));
                 if (s instanceof RequestPromising promising) {
-                    if (jsonObject.has("data")) {
-                        promising.setData(jsonObject.getJSONObject("data"));
-                    }
+                    netInstance.getRequestHandler().handleRequest(promising, jsonObject.has("data")? jsonObject.getJSONObject("data") : new JSONObject());
                     promising.validateRequest();
                     promising.getResponse().queue();
                 }
@@ -270,5 +269,9 @@ public abstract class Connection {
             requestQueue.add(0, request);
             requestQueue.notifyAll();
         }
+    }
+    
+    public Socket getSocket() {
+        return socket;
     }
 }

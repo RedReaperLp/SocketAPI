@@ -29,21 +29,10 @@ public class RequestRegister extends RequestPromising {
 
     @Override
     public void validateRequest() {
-        SocketServer socketServer = (SocketServer) getManager().getNetInstance();
-        if (getData() == null) {
-            setResponse(new JSONObject().put("success", false).put("reason", "no data"), 400);
-            return;
-        }
-        if (!socketServer.getRegisteredConnectionClasses().isEmpty()) {
-            if (!socketServer.hasIdentifier(getData().get("identifier").toString())) {
-                setResponse(new JSONObject().put("success", false).put("reason", "identifier not found"), 404);
-            }
-        }
-        setResponse(new JSONObject().put("success", true), 200);
     }
 
     @Override
-    public void valudateResponse() {
+    public void validateResponse() {
         if (getResponse().getStatus() != 200) {
             failed(getResponse().getStatus());
         }

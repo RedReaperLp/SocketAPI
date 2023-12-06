@@ -20,6 +20,10 @@ public abstract class RequestPromising implements Request {
         this.id = id;
     }
 
+    /**
+     * Sends the request and waits for the response
+     * @return
+     */
     public Response complete() {
         queue();
         synchronized (lock) {
@@ -34,12 +38,18 @@ public abstract class RequestPromising implements Request {
         return getResponse();
     }
 
+    /**
+     * Queues the request but does not wait for the response
+     */
     @Override
     public void queue() {
         setTimeSent(System.currentTimeMillis());
         Request.super.queue();
     }
 
+    /**
+     * @return The request type
+     */
     @Override
     public RequestManager getManager() {
         return manager;
@@ -50,6 +60,10 @@ public abstract class RequestPromising implements Request {
         this.manager = manager;
     }
 
+    /**
+     * Sets the data of the request
+     * @param data The data of the request
+     */
     @Override
     public void setData(JSONObject data) {
         this.data = data;
@@ -60,13 +74,17 @@ public abstract class RequestPromising implements Request {
         return data;
     }
 
+    /**
+     * Packs the request into a JSONObject, this will be called before sending the request
+     *
+     * @apiNote Used if there are additional fields in the requests class
+     */
     @Override
-    public void pack() {
+    public void pack() {}
 
-    }
-
-    public void finalizeAll() {
-    }
+    /**
+     * @return The response of the request
+     */
     public Response getResponse() {
         if (response == null) {
             response = getManager().getRequest(Response.class, getId());
@@ -75,6 +93,12 @@ public abstract class RequestPromising implements Request {
         return response;
     }
 
+    /**
+     * Sets the response data and status
+     *
+     * @param data   The response data
+     * @param status The response status
+     */
     public void setResponse(JSONObject data, int status) {
         isResponding = true;
         if (response == null) {
@@ -84,42 +108,91 @@ public abstract class RequestPromising implements Request {
         response.setStatus(status);
     }
 
+    /**
+     * Sets the response data and status
+     *
+     * @param data The response data
+     * @apiNote This will set the status to the status from the data
+     */
     public void setResponse(JSONObject data) {
-        setResponse(data, data.getInt("status"));
+        if (data.has("status")) {
+            setResponse(data, data.getInt("status"));
+        } else {
+            setResponse(data);
+        }
     }
 
+    /**
+     * @return The request id
+     */
     public long getId() {
         return id;
     }
 
+    /**
+     * Notifies the waiting thread that the request is done
+     *
+     * @apiNote This will be called automatically when the response is received and handled
+     */
     public void done() {
         synchronized (lock) {
             lock.notifyAll();
         }
     }
 
+    /**
+     * This returns the time when the request was sent in milliseconds
+     * @return The time the request was sent
+     */
     public long getTimeSent() {
         return timeSent;
     }
 
+    /**
+     * This returns the time span between sending and receiving the request in milliseconds
+     * @return The time span between sending and receiving the request
+     */
     public long getLatency() {
         return timeReceived - timeSent;
     }
 
+    /**
+     * Sets the time when the request was sent
+     * @param timeSent The time when the request was sent
+     */
     public void setTimeSent(long timeSent) {
         this.timeSent = timeSent;
     }
 
+    /**
+     * Sets the failed status
+     *
+     * @param status The status code
+     */
     public void failed(int status) {
         failed = status;
     }
 
+    /**
+     * Returns the failed status code
+     * @return The failed status code
+     * @apiNote This will be 200 if the request was successful
+     */
     public int failed() {
         return failed;
     }
 
+    /**
+     * Validates the request, if the request is not valid, it should call {@link #failed(int)}
+     *
+     * @apiNote This should check for possible null values etc.
+     */
     public abstract void validateRequest();
-    public abstract void valudateResponse();
+
+    /**
+     * Validates the response, if the response is not valid, it should call {@link #failed(int)}
+     */
+    public abstract void validateResponse();
 
     public boolean isResponding() {
         return isResponding;

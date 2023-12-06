@@ -7,6 +7,7 @@ import com.github.redreaperlp.socketapi.communication.request.requests.RequestRe
 import com.github.redreaperlp.socketapi.server.SocketServer;
 import com.github.redreaperlp.test.GameConnection;
 import com.github.redreaperlp.test.LobbyConnection;
+import org.json.JSONObject;
 
 public class Main {
     public static void main(String[] args) {
@@ -14,11 +15,19 @@ public class Main {
         RequestManager.registerRequest("register", RequestRegister.class);
 
         if (args.length > 0) {
-            switch (args[0]){
+            switch (args[0]) {
                 case "server" -> {
                     SocketServer socketServer = new SocketServer(800);
                     socketServer.registerCustomConnectionClass("game", GameConnection.class);
                     socketServer.registerCustomConnectionClass("lobby", LobbyConnection.class);
+
+                    socketServer.getRequestHandler().registerPromisingHandler(RequestPing.class, (req, data) -> {
+                        req.setResponse(new JSONObject().put("pong", true), 200);
+                        System.out.println("Ping: " + req.getLatency());
+                        System.out.println("Data: " + data);
+                        System.out.println("ID: " + req.getId());
+                    });
+
                     socketServer.start();
                 }
                 case "client" -> {
@@ -27,7 +36,7 @@ public class Main {
                     socketClient.start();
 
                     new Thread(() -> {
-                        while (true)  {
+                        while (true) {
                             RequestPing req = socketClient.getRequest(RequestPing.class);
                             req.complete();
                             if (req.failed() != 200) {
@@ -44,7 +53,7 @@ public class Main {
                     }).start();
 
                     try {
-                        Thread.sleep(3000);
+                        Thread.sleep(10000);
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }

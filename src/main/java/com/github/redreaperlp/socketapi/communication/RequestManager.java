@@ -105,4 +105,8 @@ public class RequestManager {
     public NetInstance getNetInstance() {
         return netInstance;
     }
+
+    public Connection getConnection() {
+        return connection;
+    }
 }

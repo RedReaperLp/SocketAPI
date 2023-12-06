@@ -4,8 +4,10 @@ import com.github.redreaperlp.socketapi.NetInstance;
 import com.github.redreaperlp.socketapi.communication.Connection;
 import com.github.redreaperlp.socketapi.communication.ConnectionImpl;
 import com.github.redreaperlp.socketapi.communication.request.Request;
-import com.github.redreaperlp.socketapi.communication.request.requests.RequestPing;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestRegister;
+import com.github.redreaperlp.socketapi.communication.handler.RequestHandler;
+import com.github.redreaperlp.socketapi.server.SocketServer;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -14,6 +16,7 @@ public class SocketClient implements NetInstance {
     private int port;
     private String ip;
     private Connection con;
+    private RequestHandler requestHandler = new RequestHandler();
 
     private Object connectionError = new Object();
     private Thread connectionErrorThread;
@@ -130,5 +133,26 @@ public class SocketClient implements NetInstance {
      */
     public <T extends Request> T getRequest(String name, long id) {
         return con.getRequestManager().getRequest(name, id);
+    }
+
+    @Override
+    public RequestHandler getRequestHandler() {
+        return requestHandler;
+    }
+
+    public void registerHandlers() {
+        requestHandler.registerPromisingHandler(RequestRegister.class, (req, data) -> {
+            SocketServer socketServer = (SocketServer) req.getManager().getNetInstance();
+            if (data == null) {
+                req.setResponse(new JSONObject().put("success", false).put("reason", "no data"), 400);
+                return;
+            }
+            if (!socketServer.getRegisteredConnectionClasses().isEmpty()) {
+                if (!socketServer.hasIdentifier(data.get("identifier").toString())) {
+                    req.setResponse(new JSONObject().put("success", false).put("reason", "identifier not found"), 404);
+                }
+            }
+            req.setResponse(new JSONObject().put("success", true), 200);
+        });
     }
 }

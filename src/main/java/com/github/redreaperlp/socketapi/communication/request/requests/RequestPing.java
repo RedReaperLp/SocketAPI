@@ -16,7 +16,7 @@ public class RequestPing extends RequestPromising {
     }
 
     @Override
-    public void valudateResponse() {
+    public void validateResponse() {
     }
 
     @Override
