@@ -1,6 +1,6 @@
 package com.github.redreaperlp.socketapi.communication;
 
-import com.github.redreaperlp.socketapi.NetInstance;
+import com.github.redreaperlp.socketapi.ns.NetInstance;
 import com.github.redreaperlp.socketapi.communication.request.Request;
 import com.github.redreaperlp.socketapi.communication.request.special.RequestPromising;
 
@@ -17,8 +17,9 @@ public class RequestManager {
     /**
      * Registers a request
      *
-     * @param name    The name of the request
+     * @param name    The name of the request, this is used to identify the request when it arrives, if the name is wrong, the request cannot be identified, if the name already exists, the request will not be registered
      * @param request The request class
+     * @implNote RequestManager.registerRequest(RequestPing.name, RequestPing.class);
      */
     public static void registerRequest(String name, Class<? extends Request> request) {
         if (requests.containsKey(name)) return;
@@ -35,9 +36,10 @@ public class RequestManager {
 
     /**
      * Creates a new request instance containing the manager
+     *
      * @param clazz The request class
+     * @param <T>   The request type
      * @return The request instance
-     * @param <T> The request type
      * @apiNote When this method is called, the id is incremented by 1
      */
     public <T extends Request> T getRequest(Class<T> clazz) {

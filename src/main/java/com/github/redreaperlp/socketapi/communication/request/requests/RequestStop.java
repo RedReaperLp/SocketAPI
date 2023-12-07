@@ -1,12 +1,11 @@
 package com.github.redreaperlp.socketapi.communication.request.requests;
 
 import com.github.redreaperlp.socketapi.communication.request.special.RequestPromising;
-import org.json.JSONObject;
 
-public class RequestPing extends RequestPromising {
-    public static final String name = "ping";
+public class RequestStop extends RequestPromising {
+    public static final String name = "stop";
 
-    public RequestPing(long id) {
+    public RequestStop(long id) {
         super(id);
     }
 

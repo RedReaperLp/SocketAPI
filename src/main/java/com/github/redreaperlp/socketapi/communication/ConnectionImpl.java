@@ -1,6 +1,6 @@
 package com.github.redreaperlp.socketapi.communication;
 
-import com.github.redreaperlp.socketapi.NetInstance;
+import com.github.redreaperlp.socketapi.ns.NetInstance;
 
 import java.net.Socket;
 

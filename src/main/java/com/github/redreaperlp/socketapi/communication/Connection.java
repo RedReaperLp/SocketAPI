@@ -1,12 +1,11 @@
 package com.github.redreaperlp.socketapi.communication;
 
-import com.github.redreaperlp.socketapi.NetInstance;
-import com.github.redreaperlp.socketapi.client.SocketClient;
+import com.github.redreaperlp.socketapi.ns.NetInstance;
+import com.github.redreaperlp.socketapi.ns.client.SocketClient;
 import com.github.redreaperlp.socketapi.communication.request.Request;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestPing;
 import com.github.redreaperlp.socketapi.communication.request.special.RequestPromising;
 import com.github.redreaperlp.socketapi.communication.response.Response;
-import com.github.redreaperlp.socketapi.server.SocketServer;
 import org.json.JSONObject;
 
 import java.io.*;
@@ -52,7 +51,7 @@ public abstract class Connection {
         return false;
     }
 
-    public void end() {
+    public void end(boolean endSocket) {
         System.out.println(requestQueue.size() + " requests left in queue");
         try {
             if (!requestQueue.isEmpty()) {
@@ -67,11 +66,14 @@ public abstract class Connection {
             if (incomingThread != null && incomingThread.isAlive()) incomingThread.interrupt();
             if (outgoingThread != null && outgoingThread.isAlive()) outgoingThread.interrupt();
             if (timeoutThread != null && timeoutThread.isAlive()) timeoutThread.interrupt();
-            if (socket.isClosed()) return;
-            socket.close();
+            if (!socket.isClosed() && endSocket) socket.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public void end() {
+        end(true);
     }
 
     public void incoming() {
@@ -106,7 +108,7 @@ public abstract class Connection {
                     JSONObject jsonObject = new JSONObject();
                     if (request instanceof RequestPromising promising) {
                         if (!promising.isResponding()) {
-                            jsonObject.put("type", request.getType());
+                            jsonObject.put("type", request.getName());
                             jsonObject.put("data", request.getData());
                         } else {
                             Response response = promising.getResponse();
@@ -116,11 +118,10 @@ public abstract class Connection {
                         }
                         jsonObject.put("id", promising.getId());
                     } else {
-                        jsonObject.put("type", request.getType());
+                        jsonObject.put("type", request.getName());
                         jsonObject.put("data", request.getData());
                     }
                     try {
-                        System.out.println("Sending " + jsonObject);
                         writer.write(jsonObject.toString());
                         writer.newLine();
                         writer.flush();
@@ -152,7 +153,7 @@ public abstract class Connection {
                         List<RequestPromising> toRemove = new ArrayList<>();
                         for (RequestPromising promising : pendingResponses) {
                             if (System.currentTimeMillis() - promising.getTimeSent() > 5000) {
-                                System.out.println("Request " + promising.getType() + " timed out");
+                                System.out.println("Request " + promising.getName() + " timed out");
                                 promising.failed(408);
                                 promising.done();
                                 toRemove.add(promising);
@@ -182,11 +183,7 @@ public abstract class Connection {
     }
 
     public void connectionError() {
-        if (netInstance instanceof SocketClient client) {
-            synchronized (client.getConnectionError()) {
-                client.getConnectionError().notifyAll();
-            }
-        }
+        netInstance.notifyConnectionClosed(this);
     }
 
     public void ping() {

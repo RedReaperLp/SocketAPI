@@ -30,7 +30,7 @@ public abstract class RequestPromising implements Request {
             try {
                 lock.wait();
                 timeReceived = System.currentTimeMillis();
-                System.out.println("Request " + getType() + " responded after " + (System.currentTimeMillis() - getTimeSent()) + "ms (id: " + getId() + ")");
+                System.out.println("Request " + getName() + " responded after " + (System.currentTimeMillis() - getTimeSent()) + "ms (id: " + getId() + ")");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -187,12 +187,12 @@ public abstract class RequestPromising implements Request {
      *
      * @apiNote This should check for possible null values etc.
      */
-    public abstract void validateRequest();
+    public void validateRequest(){};
 
     /**
      * Validates the response, if the response is not valid, it should call {@link #failed(int)}
      */
-    public abstract void validateResponse();
+    public void validateResponse(){};
 
     public boolean isResponding() {
         return isResponding;

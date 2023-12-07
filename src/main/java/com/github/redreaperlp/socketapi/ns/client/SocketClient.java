@@ -1,12 +1,14 @@
-package com.github.redreaperlp.socketapi.client;
+package com.github.redreaperlp.socketapi.ns.client;
 
-import com.github.redreaperlp.socketapi.NetInstance;
+import com.github.redreaperlp.socketapi.communication.request.requests.RequestStop;
+import com.github.redreaperlp.socketapi.communication.response.Response;
+import com.github.redreaperlp.socketapi.ns.NetInstance;
 import com.github.redreaperlp.socketapi.communication.Connection;
 import com.github.redreaperlp.socketapi.communication.ConnectionImpl;
 import com.github.redreaperlp.socketapi.communication.request.Request;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestRegister;
 import com.github.redreaperlp.socketapi.communication.handler.RequestHandler;
-import com.github.redreaperlp.socketapi.server.SocketServer;
+import com.github.redreaperlp.socketapi.ns.server.SocketServer;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -62,37 +64,41 @@ public class SocketClient implements NetInstance {
     }
 
     public void onConnectionError() {
-        synchronized (connectionError) {
-            try {
-                connectionError.wait();
-            } catch (InterruptedException e) {
-                System.out.println("ConnectionErrorThread interrupted, stopping...");
-                return;
+        while (true) {
+            synchronized (connectionError) {
+                try {
+                    connectionError.wait();
+                } catch (InterruptedException e) {
+                    System.out.println("ConnectionErrorThread interrupted, stopping...");
+                    return;
+                }
             }
-        }
-        con.end();
-        System.out.println("Connection error occurred, reconnecting...");
-        while (!start()) {
-            System.out.println("Failed to reconnect, retrying in 1 second...");
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                System.out.println("ConnectionErrorThread interrupted, stopping...");
-                return;
+            con.end();
+            System.out.println("Connection error occurred, reconnecting...");
+            while (!start()) {
+                System.out.println("Failed to reconnect, retrying in 1 second...");
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    System.out.println("ConnectionErrorThread interrupted, stopping...");
+                    return;
+                }
             }
         }
     }
 
     public void stop() {
+        Response res = getRequest(RequestStop.class).complete();
         if (connectionErrorThread != null && connectionErrorThread.isAlive()) connectionErrorThread.interrupt();
         con.end();
     }
 
     /**
      * Creates a new request instance containing the manager
+     *
      * @param clazz The request class
+     * @param <T>   The request type
      * @return The request instance
-     * @param <T> The request type
      * @apiNote When this method is called, the id is incremented by 1
      */
     public <T extends Request> T getRequest(Class<T> clazz) {
@@ -104,7 +110,7 @@ public class SocketClient implements NetInstance {
      *
      * @param clazz The request class
      * @param <T>   The request type
-     * @param id The request id (if you want to specify it)
+     * @param id    The request id (if you want to specify it)
      * @return The request instance
      * @apiNote This works too, if the class is not registered, this will not increment the id
      */
@@ -127,7 +133,7 @@ public class SocketClient implements NetInstance {
      * Creates a new request instance containing the manager
      *
      * @param name The request name
-     * @param id The request id (if you want to specify it)
+     * @param id   The request id (if you want to specify it)
      * @return The request instance
      * @apiNote Be careful, <T> is not checked, so you can get a {@link ClassCastException}, only works if the class is registered
      */
@@ -154,5 +160,12 @@ public class SocketClient implements NetInstance {
             }
             req.setResponse(new JSONObject().put("success", true), 200);
         });
+    }
+
+    @Override
+    public void notifyConnectionClosed(Connection con) {
+        synchronized (connectionError) {
+            connectionError.notifyAll();
+        }
     }
 }

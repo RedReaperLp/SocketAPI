@@ -41,7 +41,7 @@ public class Response extends RequestVoiding {
     }
 
     @Override
-    public String getType() {
+    public String getName() {
         return "response";
     }
 

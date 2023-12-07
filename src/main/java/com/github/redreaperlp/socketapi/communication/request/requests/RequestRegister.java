@@ -1,11 +1,10 @@
 package com.github.redreaperlp.socketapi.communication.request.requests;
 
 import com.github.redreaperlp.socketapi.communication.request.special.RequestPromising;
-import com.github.redreaperlp.socketapi.server.SocketServer;
 import org.json.JSONObject;
 
 public class RequestRegister extends RequestPromising {
-    private final String type = "register";
+    public static final String name = "register";
     private String connectionIdentifier;
 
     public RequestRegister(long id) {
@@ -13,8 +12,8 @@ public class RequestRegister extends RequestPromising {
     }
 
     @Override
-    public String getType() {
-        return type;
+    public String getName() {
+        return name;
     }
 
     public void setConnectionIdentifier(String connectionIdentifier) {
