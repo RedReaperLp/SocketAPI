@@ -14,7 +14,6 @@ public class Main {
         RequestManager.registerRequest(RequestPing.name, RequestPing.class);
         RequestManager.registerRequest(RequestRegister.name, RequestRegister.class);
         RequestManager.registerRequest(RequestStop.name, RequestStop.class);
-
         if (args.length > 0) {
             switch (args[0]) {
                 case "server" -> {

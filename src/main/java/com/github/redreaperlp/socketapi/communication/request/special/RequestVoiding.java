@@ -29,4 +29,7 @@ public abstract class RequestVoiding implements Request {
     public JSONObject getData() {
         return data;
     }
+
+    @Override
+    public void pack() {}
 }
