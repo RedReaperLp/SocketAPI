@@ -5,17 +5,13 @@
 - [Socket Reaper](#socket-reaper)
     - [Index](#index)
     - [Introduction](#introduction)
-    - [Artifacts](#artifacts)
     - [Dependencies](#dependencies)
-        - [Initializing a Server:](#initializing-a-server)
-        - [Initializing a Client:](#initializing-a-client)
-        - [Creating a responding Request:](#creating-a-responding-request)
-        - [Creating a non-responding Request:](#creating-a-non-responding-request)
-        -
-        - [Sending a Request:](#sending-a-request)
     - [Usage](#usage)
-    - [Installation](#installation)
-    - [Configuration](#configuration)
+    - [Initializing a Server:](#initializing-a-server)
+    - [Initializing a Client:](#initializing-a-client)
+    - [Creating a responding Request:](#creating-a-responding-request)
+    - [Creating a non-responding Request:](#creating-a-non-responding-request)
+    - [Sending a Request:](#sending-a-request)
     - [License](#license)
 
 ## Introduction
@@ -26,9 +22,7 @@ It is designed to be used as a communication tool between two applications which
 
 ## Dependencies
 
-## Artifacts
-
-## Usage
+- [JSON-Java](https://mvnrepository.com/artifact/org.json/json)
 
 #### Initializing a Server:
 
@@ -47,6 +41,11 @@ It is designed to be used as a communication tool between two applications which
 <br>
 
 #### Creating a responding Request:
+
+- This is the request that is expecting a response
+- It has to extend
+  the [RequestPromising](src/main/java/com/github/redreaperlp/socketapi/communication/request/special/RequestPromising.java)
+  class
 
 ```java
 public class RequestPing extends RequestPromising {
@@ -67,11 +66,17 @@ public class RequestPing extends RequestPromising {
 
 #### Creating a non-responding Request:
 
+- This is basically the same but with a slight change
+- It has to extend
+  the [RequestVoiding](src/main/java/com/github/redreaperlp/socketapi/communication/request/special/RequestVoiding.java)
+  class
+- The id is not needed as there is no response expected
+
 ```java
 public class RequestPing extends RequestVoiding {
     public static final String name = "notification"; // The name of the request (used for identification so it should be unique)
 
-    public RequestPing() { // As this request is not expecting a response, there is no need to pass an id
+    public RequestPing() {
         super();
     }
 
@@ -103,14 +108,15 @@ public static void main(String[] args) {
 
 - The handler handling the request has to be registered. This can be done in both the client and the server like in the
   example below
-  - [SocketServer](#initializing-a-server) and [SocketClient](#initializing-a-client) both extend the
-    [NetInstance](src/main/java/com/github/redreaperlp/socketapi/ns/NetInstance.java) class
+    - [SocketServer](#initializing-a-server) and [SocketClient](#initializing-a-client) both extend the
+      [NetInstance](src/main/java/com/github/redreaperlp/socketapi/ns/NetInstance.java) class
+
 ```java
 public static void main(String[] args) {
     SocketServer server = new SocketServer(port);
     //or
-    SocketClient client = new SocketClient(host, port); 
-    
+    SocketClient client = new SocketClient(host, port);
+
     //here we register the handler for the request
     server.getRequestHandler().registerPromisingHandler(RequestPing.class, (req, data) -> {
         //here you can handle the request, the data is the data that was sent with the request
@@ -118,3 +124,27 @@ public static void main(String[] args) {
     });
 }
 ```
+
+<br>
+
+#### Sending a Request:
+
+```java
+public static void main(String[] args) {
+    [...] //Server or Client are initialized before
+    Request req = client.getRequest(RequestRegister.class); //here we get the request, if it is a responding request, it will automatically generate an id for it
+    req.setData(new JSONObject().put("name", "test")); //here we set the data of the request, this is what you get in the [RequestHandler](#handling-a-request)
+    //now you have two options, either you send the request and wait for the response or you just send it and ignore the response
+    //if you want to wait for the response, you can use the following code
+    Response res = req.complete(); //this will send the request and wait for the response or is marked as failed when it times out
+    if (req.failed()) { //here we check if the request failed
+        //here you can handle the failure
+    } else {
+        //here you can handle the response
+    }
+
+    //if you want to ignore the response, you can use the following code
+    req.queue(); //this will send the request and ignore the response
+}
+```
+

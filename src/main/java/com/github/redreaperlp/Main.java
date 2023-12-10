@@ -43,4 +43,10 @@ public class Main {
             }
         }
     }
+
+    //TODO: Add a way to complete a request with a handler like this where the code continues while the request is still being processed
+    /*
+    socketClient.getRequest(RequestRegister.class).complete((req, data) -> {
+        System.out.println("Register from " + req.getManager().getConnection().getSocket().getInetAddress().getHostAddress());
+     */
 }
