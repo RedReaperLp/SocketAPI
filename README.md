@@ -7,11 +7,12 @@
     - [Introduction](#introduction)
     - [Dependencies](#dependencies)
     - [Usage](#usage)
-        - [Initializing a Server:](#initializing-a-server)
-        - [Initializing a Client:](#initializing-a-client)
-        - [Creating a responding Request:](#creating-a-responding-request)
-        - [Creating a non-responding Request:](#creating-a-non-responding-request)
-        - [Sending a Request:](#sending-a-request)
+      - [Requests](#requests)
+          - [Initializing a Server](#initializing-a-server)
+          - [Initializing a Client](#initializing-a-client)
+          - [Creating a responding Request](#creating-a-responding-request)
+          - [Creating a non-responding Request](#creating-a-non-responding-request)
+          - [Sending a Request](#sending-a-request)
     - [License](#license)
 
 ## Introduction
@@ -36,13 +37,15 @@ It is designed to be used as a communication tool between two applications which
 
 ## Initializing a Client:
 
-    - The client is initialized with a host and a port to which it will connect
+- The client is initialized with a host and a port to which it will connect
 
 ```java
     SocketClient client = new SocketClient(host, port);
 ```
 
 <br>
+
+## Requests:
 
 #### Creating a responding Request:
 
@@ -173,7 +176,7 @@ public static void main(String[] args) {
   the [pack()](src/main/java/com/github/redreaperlp/socketapi/communication/request/Request.java#L23) like in the
   example below to send the request with the data
   this is also the data that is received in
-  the [RequestHandler](src/main/java/com/github/redreaperlp/socketapi/ns/RequestHandler.java)
+  the [RequestHandler](src/main/java/com/github/redreaperlp/socketapi/communication/handler/RequestHandler.java#L79)
 
 ```java
 public class RequestPlayerMoved extends RequestPromising {
