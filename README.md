@@ -139,12 +139,12 @@ public static void main(String[] args) {
     - this method is called when a response is received and the request is
       a [RequestPromising](src/main/java/com/github/redreaperlp/socketapi/communication/request/special/RequestPromising.java)
     - if the response is not satisfying, you can call
-      the [failed(int)](src/main/java/com/github/redreaperlp/socketapi/communication/request/RequestPromising.java#L172)
+      the [failed(int)](src/main/java/com/github/redreaperlp/socketapi/communication/request/special/RequestPromising.java#L172)
       method to mark the request as failed
       <br>
 
 #### Sending a Request:
-
+    
 - You can send a request from both the client and the server.
 - Here we take the [Initialization](#initializing-a-server) of the server as an example
 
