@@ -22,7 +22,6 @@ public class RequestRegister extends RequestPromising {
 
     @Override
     public void pack() {
-        super.pack();
         setData(new JSONObject().put("identifier", connectionIdentifier));
     }
 
