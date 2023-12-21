@@ -1,13 +1,14 @@
 package com.github.redreaperlp.socketapi.ns.server;
 
-import com.github.redreaperlp.socketapi.communication.request.requests.RequestStop;
-import com.github.redreaperlp.socketapi.ns.NetInstance;
 import com.github.redreaperlp.socketapi.communication.Connection;
 import com.github.redreaperlp.socketapi.communication.ConnectionImpl;
 import com.github.redreaperlp.socketapi.communication.handler.RequestHandler;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestPing;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestRegister;
+import com.github.redreaperlp.socketapi.communication.request.requests.RequestStop;
 import com.github.redreaperlp.socketapi.communication.response.Response;
+import com.github.redreaperlp.socketapi.event.ConnectionHandler;
+import com.github.redreaperlp.socketapi.ns.NetInstance;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -16,28 +17,13 @@ import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.HashMap;
-import java.util.Map;
 
 public class SocketServer implements NetInstance {
     private int port;
     private Thread incomingThread;
     private RequestHandler requestHandler = new RequestHandler();
-    private final Map<String, Class<? extends Connection>> customConnectionClasses = new HashMap<>();
 
-    /**
-     * Registers a custom connection class
-     *
-     * @param name  The identifier
-     * @param clazz The class
-     * @apiNote This is used to identify the connection and differentiate
-     * between them to have different actions for each connection
-     */
-    public void registerCustomConnectionClass(String name, Class<? extends Connection> clazz) {
-        if (!customConnectionClasses.containsKey(name)) {
-            customConnectionClasses.put(name, clazz);
-        }
-    }
+
 
     public SocketServer(int port) {
         this.port = port;
@@ -70,7 +56,7 @@ public class SocketServer implements NetInstance {
                 while (true) {
                     Socket socket = serverSocket.accept();
                     System.out.println("New connection from " + socket.getInetAddress().getHostAddress());
-                    if (customConnectionClasses.isEmpty()) {
+                    if (ConnectionHandler.getInstance().getRegisteredConnectionClasses().isEmpty()) {
                         Connection con = new ConnectionImpl(socket, this);
                         con.incoming();
                         con.outgoing();
@@ -91,9 +77,9 @@ public class SocketServer implements NetInstance {
                                     requestHandler.handleRequest(con.getRequestManager().getRequest(RequestRegister.class, id), data);
                                     if (data.has("identifier")) {
                                         String identifier = data.getString("identifier");
-                                        if (customConnectionClasses.containsKey(identifier)) {
+                                        if (ConnectionHandler.getInstance().hasIdentifier(identifier)) {
                                             con.end(false);
-                                            Connection customCon = customConnectionClasses.get(identifier)
+                                            Connection customCon = ConnectionHandler.getInstance().getConnectionClass(identifier)
                                                     .getDeclaredConstructor(Socket.class, NetInstance.class)
                                                     .newInstance(socket, this);
                                             customCon.incoming();
@@ -137,15 +123,6 @@ public class SocketServer implements NetInstance {
      */
     public RequestHandler getRequestHandler() {
         return requestHandler;
-    }
-
-    public boolean hasIdentifier(String identifier) {
-        return customConnectionClasses.containsKey(identifier);
-    }
-
-
-    public Map<String, Class<? extends Connection>> getRegisteredConnectionClasses() {
-        return customConnectionClasses;
     }
 
     @Override

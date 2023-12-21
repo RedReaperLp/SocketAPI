@@ -4,6 +4,7 @@ import com.github.redreaperlp.socketapi.communication.RequestManager;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestPing;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestRegister;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestStop;
+import com.github.redreaperlp.socketapi.event.ConnectionHandler;
 import com.github.redreaperlp.socketapi.ns.client.SocketClient;
 import com.github.redreaperlp.socketapi.ns.server.SocketServer;
 import com.github.redreaperlp.test.GameConnection;
@@ -14,14 +15,16 @@ public class Main {
         RequestManager.registerRequest(RequestPing.name, RequestPing.class);
         RequestManager.registerRequest(RequestRegister.name, RequestRegister.class);
         RequestManager.registerRequest(RequestStop.name, RequestStop.class);
+
+        ConnectionHandler h = ConnectionHandler.getInstance();
+        h.registerCustomConnectionClass("game", GameConnection.class);
+        h.registerCustomConnectionClass("lobby", LobbyConnection.class);
+
         if (args.length > 0) {
             switch (args[0]) {
                 case "server" -> {
                     SocketServer socketServer = new SocketServer(800);
-                    socketServer.registerCustomConnectionClass("game", GameConnection.class);
-                    socketServer.registerCustomConnectionClass("lobby", LobbyConnection.class);
                     socketServer.start();
-
                     socketServer.getRequestHandler().registerHandler(RequestPing.class, (req, data) -> {
                         System.out.println("Ping from " + req.getManager().getConnection().getSocket().getInetAddress().getHostAddress());
                     });
@@ -44,3 +47,6 @@ public class Main {
         }
     }
 }
+
+//Todo: Think about making the RequestHandler a singleton (Meaning: Only one instance of it can exist)
+//Todo: Think about making the SocketServer#customConnectionClasses a singleton

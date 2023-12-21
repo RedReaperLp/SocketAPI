@@ -1,11 +1,10 @@
 package com.github.redreaperlp.socketapi.communication;
 
-import com.github.redreaperlp.socketapi.ns.NetInstance;
-import com.github.redreaperlp.socketapi.ns.client.SocketClient;
 import com.github.redreaperlp.socketapi.communication.request.Request;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestPing;
 import com.github.redreaperlp.socketapi.communication.request.special.RequestPromising;
 import com.github.redreaperlp.socketapi.communication.response.Response;
+import com.github.redreaperlp.socketapi.ns.NetInstance;
 import org.json.JSONObject;
 
 import java.io.*;
@@ -54,7 +53,7 @@ public abstract class Connection {
     public void end(boolean endSocket) {
         System.out.println(requestQueue.size() + " requests left in queue");
         try {
-            if (!requestQueue.isEmpty()) {
+            if (!requestQueue.isEmpty() && endSocket) {
                 for (Request request : requestQueue) {
                     if (request instanceof RequestPromising promising) {
                         promising.failed(408);
@@ -67,6 +66,8 @@ public abstract class Connection {
             if (outgoingThread != null && outgoingThread.isAlive()) outgoingThread.interrupt();
             if (timeoutThread != null && timeoutThread.isAlive()) timeoutThread.interrupt();
             if (!socket.isClosed() && endSocket) socket.close();
+            if (reader != null && !reader.ready() && endSocket) reader.close();
+            if (writer != null && endSocket) writer.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

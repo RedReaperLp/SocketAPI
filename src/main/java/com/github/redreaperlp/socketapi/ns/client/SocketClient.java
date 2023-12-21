@@ -1,13 +1,14 @@
 package com.github.redreaperlp.socketapi.ns.client;
 
-import com.github.redreaperlp.socketapi.communication.request.requests.RequestStop;
-import com.github.redreaperlp.socketapi.communication.response.Response;
-import com.github.redreaperlp.socketapi.ns.NetInstance;
 import com.github.redreaperlp.socketapi.communication.Connection;
 import com.github.redreaperlp.socketapi.communication.ConnectionImpl;
+import com.github.redreaperlp.socketapi.communication.handler.RequestHandler;
 import com.github.redreaperlp.socketapi.communication.request.Request;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestRegister;
-import com.github.redreaperlp.socketapi.communication.handler.RequestHandler;
+import com.github.redreaperlp.socketapi.communication.request.requests.RequestStop;
+import com.github.redreaperlp.socketapi.communication.response.Response;
+import com.github.redreaperlp.socketapi.event.ConnectionHandler;
+import com.github.redreaperlp.socketapi.ns.NetInstance;
 import com.github.redreaperlp.socketapi.ns.server.SocketServer;
 import org.json.JSONObject;
 
@@ -20,7 +21,7 @@ public class SocketClient implements NetInstance {
     private Connection con;
     private RequestHandler requestHandler = new RequestHandler();
 
-    private Object connectionError = new Object();
+    private Object connectionErrorLock = new Object();
     private Thread connectionErrorThread;
 
     private String connectionIdentifier;
@@ -28,6 +29,7 @@ public class SocketClient implements NetInstance {
     public SocketClient(String ip, int port) {
         this.ip = ip;
         this.port = port;
+        registerHandlers();
         connectionErrorThread = new Thread(this::onConnectionError);
         connectionErrorThread.setName("ConnectionErrorThread");
         connectionErrorThread.start();
@@ -59,15 +61,15 @@ public class SocketClient implements NetInstance {
         return true;
     }
 
-    public Object getConnectionError() {
-        return connectionError;
+    private Object getConnectionErrorLock() {
+        return connectionErrorLock;
     }
 
     public void onConnectionError() {
         while (true) {
-            synchronized (connectionError) {
+            synchronized (connectionErrorLock) {
                 try {
-                    connectionError.wait();
+                    connectionErrorLock.wait();
                 } catch (InterruptedException e) {
                     System.out.println("ConnectionErrorThread interrupted, stopping...");
                     return;
@@ -148,24 +150,25 @@ public class SocketClient implements NetInstance {
 
     public void registerHandlers() {
         requestHandler.registerPromisingHandler(RequestRegister.class, (req, data) -> {
-            SocketServer socketServer = (SocketServer) req.getManager().getNetInstance();
-            if (data == null) {
-                req.setResponse(new JSONObject().put("success", false).put("reason", "no data"), 400);
-                return;
-            }
-            if (!socketServer.getRegisteredConnectionClasses().isEmpty()) {
-                if (!socketServer.hasIdentifier(data.get("identifier").toString())) {
-                    req.setResponse(new JSONObject().put("success", false).put("reason", "identifier not found"), 404);
+            if (req.getManager().getNetInstance() instanceof SocketServer server) {
+                if (data == null) {
+                    req.setResponse(new JSONObject().put("success", false).put("reason", "no data"), 400);
+                    return;
                 }
+                if (!ConnectionHandler.getInstance().getRegisteredConnectionClasses().isEmpty()) {
+                    if (!ConnectionHandler.getInstance().hasIdentifier(data.get("identifier").toString())) {
+                        req.setResponse(new JSONObject().put("success", false).put("reason", "identifier not found"), 404);
+                    }
+                }
+                req.setResponse(new JSONObject().put("success", true), 200);
             }
-            req.setResponse(new JSONObject().put("success", true), 200);
         });
     }
 
     @Override
     public void notifyConnectionClosed(Connection con) {
-        synchronized (connectionError) {
-            connectionError.notifyAll();
+        synchronized (connectionErrorLock) {
+            connectionErrorLock.notifyAll();
         }
     }
 }
