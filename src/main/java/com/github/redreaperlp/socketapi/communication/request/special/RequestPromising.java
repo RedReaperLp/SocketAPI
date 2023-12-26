@@ -5,6 +5,8 @@ import com.github.redreaperlp.socketapi.communication.request.Request;
 import com.github.redreaperlp.socketapi.communication.response.Response;
 import org.json.JSONObject;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 public abstract class RequestPromising implements Request {
     private RequestManager manager;
     private Response response;
@@ -15,6 +17,7 @@ public abstract class RequestPromising implements Request {
     private final Object lock = new Object();
     private int failed = 200;
     private boolean isResponding = false;
+    private AtomicBoolean responseReceived = new AtomicBoolean(false);
 
     public RequestPromising(long id) {
         this.id = id;
@@ -28,9 +31,12 @@ public abstract class RequestPromising implements Request {
         queue();
         synchronized (lock) {
             try {
-                lock.wait();
+                System.out.print("Sent ");
+                if (!responseReceived.get()) {
+                    lock.wait();
+                }
                 timeReceived = System.currentTimeMillis();
-                System.out.println("Request " + getName() + " responded after " + (System.currentTimeMillis() - getTimeSent()) + "ms (id: " + getId() + ")");
+                System.out.println("-> " + getName() + " responded after " + (System.currentTimeMillis() - getTimeSent()) + "ms (id: " + getId() + ")");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -106,6 +112,10 @@ public abstract class RequestPromising implements Request {
         }
         response.setData(data);
         response.setStatus(status);
+        responseReceived.set(true);
+        synchronized (lock) {
+            lock.notifyAll();
+        }
     }
 
     /**
@@ -198,3 +208,6 @@ public abstract class RequestPromising implements Request {
         return isResponding;
     }
 }
+
+
+//Todo: For preventing a response to arrive before the wait is called add a new Thread that checks if a request has been responded, otherwise the program hangs up

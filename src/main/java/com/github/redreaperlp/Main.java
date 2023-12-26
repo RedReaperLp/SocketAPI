@@ -10,8 +10,10 @@ import com.github.redreaperlp.socketapi.ns.server.SocketServer;
 import com.github.redreaperlp.test.GameConnection;
 import com.github.redreaperlp.test.LobbyConnection;
 
+import java.io.IOException;
+
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         RequestManager.registerRequest(RequestPing.name, RequestPing.class);
         RequestManager.registerRequest(RequestRegister.name, RequestRegister.class);
         RequestManager.registerRequest(RequestStop.name, RequestStop.class);
@@ -36,12 +38,11 @@ public class Main {
                     SocketClient socketClient = new SocketClient("localhost", 800);
                     socketClient.setConnectionIdentifier("lobby");
                     socketClient.start();
-                    try {
-                        Thread.sleep(10000);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                    socketClient.stop();
+
+                    //shutdown hook
+                    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                        socketClient.stop();
+                    }));
                 }
             }
         }

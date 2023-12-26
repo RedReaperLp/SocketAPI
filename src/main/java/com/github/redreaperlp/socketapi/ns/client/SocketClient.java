@@ -56,6 +56,8 @@ public class SocketClient implements NetInstance {
             }
             con.ping();
         } catch (IOException e) {
+            System.out.println("Failed to connect to " + ip + ":" + port);
+            e.printStackTrace();
             return false;
         }
         return true;

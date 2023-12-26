@@ -191,7 +191,7 @@ public abstract class Connection {
         pingThread = new Thread(() -> {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    Thread.sleep(2000);
+                    Thread.sleep(100);
                 } catch (InterruptedException e) {
                     System.out.println("Ping thread interrupted");
                     return;
