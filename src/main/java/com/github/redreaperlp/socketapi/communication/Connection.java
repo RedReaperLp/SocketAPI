@@ -164,7 +164,7 @@ public abstract class Connection {
                     synchronized (pendingResponses) {
                         List<RequestPromising> toRemove = new ArrayList<>();
                         for (RequestPromising promising : pendingResponses) {
-                            if (System.currentTimeMillis() - promising.getTimeSent() > 5000) {
+                            if (System.currentTimeMillis() - promising.getTimeSent() > getPingInterval() * 3) {
                                 System.out.println("Request " + promising.getName() + " timed out");
                                 promising.failed(408);
                                 promising.done();
@@ -303,5 +303,13 @@ public abstract class Connection {
      * @apiNote Can be overridden to do something
      */
     public void notifier(Connection con) {
+    }
+
+    public long getPingInterval() {
+        return pingInterval;
+    }
+
+    public void setPingInterval(long pingInterval) {
+        this.pingInterval = pingInterval;
     }
 }
