@@ -25,6 +25,7 @@ public abstract class Connection {
     private final RequestManager requestManager;
     public final List<RequestPromising> pendingResponses = new ArrayList<>();
     private final List<Request> requestQueue = new ArrayList<>();
+    private long pingInterval = 100;
 
     public Connection(Socket socket, NetInstance netInstance) {
         this.socket = socket;
@@ -47,9 +48,11 @@ public abstract class Connection {
         return writer;
     }
 
+    /*
     public boolean isAlive() {
-        return false;
+        return
     }
+    */
 
     public void end(boolean endSocket) {
         System.out.println(requestQueue.size() + " requests left in queue");
@@ -81,6 +84,9 @@ public abstract class Connection {
         end(true);
     }
 
+    /**
+     * starts the incoming thread
+     */
     public void incoming() {
         incomingThread = new Thread(() -> {
             while (!incomingThread.isInterrupted()) {
@@ -102,7 +108,8 @@ public abstract class Connection {
     }
 
     /**
-     * Sends all requests in the queue
+     * Sends all requests in the queue to the receiver and clears the queue
+     * @apiNote Thread waits until the queue is not empty and continues afterwards
      */
     public void outgoing() {
         outgoingThread = new Thread(() -> {
@@ -207,6 +214,9 @@ public abstract class Connection {
         pingThread.start();
     }
 
+    /**
+     * @param jsonObject The json object to resolve
+     */
     private void resolve(JSONObject jsonObject) {
         if (jsonObject.has("type")) {
             if (jsonObject.getString("type").equals("response")) {
@@ -239,10 +249,17 @@ public abstract class Connection {
         }
     }
 
+    /**
+     * @return The request manager
+     */
     public RequestManager getRequestManager() {
         return requestManager;
     }
 
+    /**
+     * Queues a request to be sent
+     * @param request The request to queue
+     */
     public void queue(Request request) {
         if (request == null) return;
 
@@ -259,7 +276,10 @@ public abstract class Connection {
         }
     }
 
-
+    /**
+     * Queues a request with priority, this means it will be sent before all other requests
+     * @param request The request to queue
+     */
     public void queuePriority(Request request) {
         if (request instanceof RequestPromising promising) {
             synchronized (pendingResponses) {
@@ -277,7 +297,11 @@ public abstract class Connection {
         return socket;
     }
 
+    /**
+     * This method is called when the connection is established
+     * @param con The connection
+     * @apiNote Can be overridden to do something
+     */
     public void notifier(Connection con) {
-
     }
 }

@@ -52,7 +52,7 @@ It is designed to be used as a communication tool between two applications which
 - This is the request that is expecting a response
 - It has to extend
   the [RequestPromising](src/main/java/com/github/redreaperlp/socketapi/communication/request/special/RequestPromising.java)
-  class
+  abstract class
 
 ```java
 public class RequestPing extends RequestPromising {
@@ -76,7 +76,7 @@ public class RequestPing extends RequestPromising {
 - This is basically the same but with a slight change
 - It has to extend
   the [RequestVoiding](src/main/java/com/github/redreaperlp/socketapi/communication/request/special/RequestVoiding.java)
-  class
+  abstract class
 - The id is not needed as there is no response expected
 
 ```java
