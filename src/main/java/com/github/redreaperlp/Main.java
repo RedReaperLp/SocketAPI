@@ -22,10 +22,13 @@ public class Main {
         h.registerCustomConnectionClass("game", GameConnection.class);
         h.registerCustomConnectionClass("lobby", LobbyConnection.class);
 
+        int port = 800;
+        String ip = "localhost";
+
         if (args.length > 0) {
             switch (args[0]) {
                 case "server" -> {
-                    SocketServer socketServer = new SocketServer(800);
+                    SocketServer socketServer = new SocketServer(port);
                     socketServer.start();
                     socketServer.getRequestHandler().registerHandler(RequestPing.class, (req, data) -> {
                         System.out.println("Ping from " + req.getManager().getConnection().getSocket().getInetAddress().getHostAddress());
@@ -35,11 +38,10 @@ public class Main {
                     });
                 }
                 case "client" -> {
-                    SocketClient socketClient = new SocketClient("localhost", 800);
+                    SocketClient socketClient = new SocketClient(ip, port);
                     socketClient.setConnectionIdentifier("lobby");
                     socketClient.start();
 
-                    //shutdown hook
                     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                         socketClient.stop();
                     }));

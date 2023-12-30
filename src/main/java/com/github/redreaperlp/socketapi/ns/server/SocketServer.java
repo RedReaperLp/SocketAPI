@@ -17,12 +17,15 @@ import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SocketServer implements NetInstance {
     private int port;
     private Thread incomingThread;
     private RequestHandler requestHandler = new RequestHandler();
 
+    private List<Connection> connections = new ArrayList<>();
 
 
     public SocketServer(int port) {
@@ -61,6 +64,8 @@ public class SocketServer implements NetInstance {
                         con.incoming();
                         con.outgoing();
                         con.timeout();
+                        con.notifier(con);
+                        connections.add(con);
                     } else {
                         new Thread(() -> {
                             try {
@@ -89,6 +94,7 @@ public class SocketServer implements NetInstance {
                                             res.setID(id);
                                             res.setData(new JSONObject().put("identifier", identifier));
                                             res.queue();
+                                            connections.add(customCon);
                                             return;
                                         }
                                         fallback.setStatus(404);
@@ -125,9 +131,32 @@ public class SocketServer implements NetInstance {
         return requestHandler;
     }
 
+    /**
+     * Removes a connection from the list
+     * @param con The connection to remove
+     */
+    public void removeConnection(Connection con) {
+        connections.remove(con);
+    }
+
+    /**
+     * Gets all connections of a specific type
+     * @param clazz The connection class
+     * @return A list of connections
+     * @param <T> The connection type
+     */
+    public <T extends Connection> List<T> getConnections(Class<T> clazz) {
+        List<T> list = new ArrayList<>();
+        for (Connection con : connections) {
+            if (clazz.isInstance(con)) {
+                list.add((T) con);
+            }
+        }
+        return list;
+    }
+
     @Override
     public void notifyConnectionClosed(Connection con) {
-        //TODO: remove connection from list
         con.end();
         System.out.println("Connection closed: " + con.getSocket().getInetAddress().getHostAddress());
     }

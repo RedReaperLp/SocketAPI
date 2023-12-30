@@ -5,6 +5,7 @@ import com.github.redreaperlp.socketapi.communication.request.requests.RequestPi
 import com.github.redreaperlp.socketapi.communication.request.special.RequestPromising;
 import com.github.redreaperlp.socketapi.communication.response.Response;
 import com.github.redreaperlp.socketapi.ns.NetInstance;
+import com.github.redreaperlp.socketapi.ns.server.SocketServer;
 import org.json.JSONObject;
 
 import java.io.*;
@@ -68,6 +69,9 @@ public abstract class Connection {
             if (!socket.isClosed() && endSocket) socket.close();
             if (reader != null && !reader.ready() && endSocket) reader.close();
             if (writer != null && endSocket) writer.close();
+            if (endSocket && netInstance instanceof SocketServer server) {
+                server.removeConnection(this);
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -271,5 +275,9 @@ public abstract class Connection {
     
     public Socket getSocket() {
         return socket;
+    }
+
+    public void notifier(Connection con) {
+
     }
 }
