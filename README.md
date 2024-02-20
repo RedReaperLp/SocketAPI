@@ -20,7 +20,7 @@
 Socket Reaper is a fairly simple tool that allows you to open a socket to a TCP-Socket and send a requests to it.
 When the Request is being sent, you have the ability to wait for a response or just ignore the result.<br>
 It is designed to be used as a communication tool between two applications which need to communicate in real-time.<br>
-
+For help join my [Discord server](https://discord.gg/ghhKXDGQhD) or contact me privately on Discord (@redreaperlp)
 ## Dependencies
 
 - [JSON-Java](https://mvnrepository.com/artifact/org.json/json)
