@@ -1,5 +1,7 @@
 # Socket Reaper
+![GitHub Repo stars](https://img.shields.io/github/stars/redreaperlp/socketapi?style=plastic)
 ![Maven metadata URL](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Feldonexus.de%2Frepository%2Fmaven-public%2Fcom%2Fgithub%2Fredreaperlp%2Fsocketapi%2Fmaven-metadata.xml&style=plastic&color=%2300ff00)
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/redreaperlp/socketapi?style=plastic&color=%2300ff00)
 
 ## Index
 
