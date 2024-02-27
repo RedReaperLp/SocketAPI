@@ -63,3 +63,7 @@ java {
     withSourcesJar()
     withJavadocJar()
 }
+
+tasks.withType<Javadoc>().configureEach() {
+    isFailOnError = false
+}

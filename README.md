@@ -25,6 +25,16 @@ For help join my [Discord server](https://discord.gg/ghhKXDGQhD) or contact me p
 
 - [JSON-Java](https://mvnrepository.com/artifact/org.json/json)
 
+## Implementation
+```kotlin
+repositories {
+  maven("https://eldonexus.de/repository/maven-public/")
+}
+
+dependencies {
+    implementation("com.github.redreaperlp", "socket-reaper", "1.0.0")
+}
+```
 ## Initializing a Server:
 
 - The server is initialized with a port on which it will listen for incoming connections
