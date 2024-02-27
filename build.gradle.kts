@@ -1,6 +1,3 @@
-import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
-import de.chojo.PublishData
-
 plugins {
     id("java")
     id("com.github.johnrengelman.shadow") version "8.1.1"
@@ -59,6 +56,7 @@ publishing {
     }
 }
 
+
 java {
     withSourcesJar()
     withJavadocJar()
@@ -67,3 +65,4 @@ java {
 tasks.withType<Javadoc>().configureEach() {
     isFailOnError = false
 }
+
