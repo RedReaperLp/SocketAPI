@@ -1,4 +1,5 @@
 # Socket Reaper
+![Maven metadata URL](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Feldonexus.de%2Frepository%2Fmaven-public%2Fcom%2Fgithub%2Fredreaperlp%2Fsocketapi%2Fmaven-metadata.xml&style=plastic&color=%2300ff00)
 
 ## Index
 
@@ -39,7 +40,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.redreaperlp", "socket-reaper", "1.0.0")
+    implementation("com.github.redreaperlp", "socket-reaper", "version")
 }
 ```
 
@@ -58,7 +59,7 @@ dependencies {
   <dependency>
     <groupId>com.github.redreaperlp</groupId>
     <artifactId>socketapi</artifactId>
-    <version>1.0</version>
+    <version>version</version>
   </dependency>
 </project>
 ```
