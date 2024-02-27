@@ -5,14 +5,17 @@
 - [Socket Reaper](#socket-reaper)
     - [Index](#index)
     - [Introduction](#introduction)
+    - [Implementation](#implementation)
+        - [Gradle Kotlin:](#gradle-kotlin)
+        - [Maven:](#maven)
     - [Dependencies](#dependencies)
     - [Usage](#usage)
-      - [Requests](#requests)
-          - [Initializing a Server](#initializing-a-server)
-          - [Initializing a Client](#initializing-a-client)
-          - [Creating a responding Request](#creating-a-responding-request)
-          - [Creating a non-responding Request](#creating-a-non-responding-request)
-          - [Sending a Request](#sending-a-request)
+        - [Requests](#requests)
+            - [Initializing a Server](#initializing-a-server)
+            - [Initializing a Client](#initializing-a-client)
+            - [Creating a responding Request](#creating-a-responding-request)
+            - [Creating a non-responding Request](#creating-a-non-responding-request)
+            - [Sending a Request](#sending-a-request)
     - [License](#license)
 
 ## Introduction
@@ -21,20 +24,45 @@ Socket Reaper is a fairly simple tool that allows you to open a socket to a TCP-
 When the Request is being sent, you have the ability to wait for a response or just ignore the result.<br>
 It is designed to be used as a communication tool between two applications which need to communicate in real-time.<br>
 For help join my [Discord server](https://discord.gg/ghhKXDGQhD) or contact me privately on Discord (@redreaperlp)
+
 ## Dependencies
 
 - [JSON-Java](https://mvnrepository.com/artifact/org.json/json)
 
 ## Implementation
+
+### Gradle Kotlin:
+
 ```kotlin
 repositories {
-  maven("https://eldonexus.de/repository/maven-public/")
+    maven("https://eldonexus.de/repository/maven-public/")
 }
 
 dependencies {
     implementation("com.github.redreaperlp", "socket-reaper", "1.0.0")
 }
 ```
+
+### Maven:
+
+```xml
+
+<project>
+  ...
+  <repositories>
+    <repository>
+      <id>eldonexus</id>
+      <url>https://eldonexus.de/repository/maven-public/</url>
+    </repository>
+  </repositories>
+  <dependency>
+    <groupId>com.github.redreaperlp</groupId>
+    <artifactId>socketapi</artifactId>
+    <version>1.0</version>
+  </dependency>
+</project>
+```
+
 ## Initializing a Server:
 
 - The server is initialized with a port on which it will listen for incoming connections
@@ -154,7 +182,7 @@ public static void main(String[] args) {
       <br>
 
 #### Sending a Request:
-    
+
 - You can send a request from both the client and the server.
 - Here we take the [Initialization](#initializing-a-server) of the server as an example
 
@@ -211,6 +239,10 @@ public class RequestPlayerMoved extends RequestPromising {
     }
 }
 ```
+
+### Planned Features:
+- [ ] Use a secure connection (SSL or Custom)
+- 
 
 ## License
 
