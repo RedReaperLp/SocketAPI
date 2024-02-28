@@ -49,7 +49,6 @@ publishing {
     }
 }
 
-
 java {
     withSourcesJar()
     withJavadocJar()
