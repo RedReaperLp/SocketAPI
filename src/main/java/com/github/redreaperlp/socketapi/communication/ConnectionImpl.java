@@ -8,4 +8,9 @@ public class ConnectionImpl extends Connection {
     public ConnectionImpl(Socket socket, NetInstance netInstance) {
         super(socket, netInstance);
     }
+
+    @Override
+    protected void registerHandlers() {
+
+    }
 }

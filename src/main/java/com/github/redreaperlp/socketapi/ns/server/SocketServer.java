@@ -2,10 +2,13 @@ package com.github.redreaperlp.socketapi.ns.server;
 
 import com.github.redreaperlp.socketapi.communication.Connection;
 import com.github.redreaperlp.socketapi.communication.ConnectionImpl;
-import com.github.redreaperlp.socketapi.communication.handler.RequestHandler;
+import com.github.redreaperlp.socketapi.communication.handler.IPromisingRequestHandler;
+import com.github.redreaperlp.socketapi.communication.handler.IReqHandler;
+import com.github.redreaperlp.socketapi.communication.handler.IRequestHandler;
+import com.github.redreaperlp.socketapi.communication.request.Request;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestPing;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestRegister;
-import com.github.redreaperlp.socketapi.communication.request.requests.RequestStop;
+import com.github.redreaperlp.socketapi.communication.request.special.RequestPromising;
 import com.github.redreaperlp.socketapi.communication.response.Response;
 import com.github.redreaperlp.socketapi.event.ConnectionHandler;
 import com.github.redreaperlp.socketapi.ns.NetInstance;
@@ -18,49 +21,55 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SocketServer implements NetInstance {
-    private int port;
+    private final int port;
     private Thread incomingThread;
-    private RequestHandler requestHandler = new RequestHandler();
+    private final List<Connection> connections = new ArrayList<>();
+    private byte[] encryptionKey;
 
-    private List<Connection> connections = new ArrayList<>();
+    private final Map<Class<? extends Request>, IReqHandler> handlers = new HashMap<>();
+    private boolean stopped = false;
 
 
     public SocketServer(int port) {
         this.port = port;
-        requestHandler.registerPromisingHandler(RequestPing.class, (req, data) -> {
-            req.setResponse(new JSONObject().put("pong", true), 200);
-        });
-        requestHandler.registerPromisingHandler(RequestStop.class, (req, data) -> {
-            System.out.println("Got stop request");
-            req.setResponse(new JSONObject().put("bye", true), 200);
-            new Thread(() -> {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-                req.getManager().getConnection().connectionError();
-            }).start();
-        });
         //TODO: Add a way to execute something when the message is sent like register(...).finally(() -> {})
     }
+
+    IPromisingRequestHandler pingHandler = (req, data) -> {
+        req.setResponse(new JSONObject().put("pong", true), 200);
+    };
+
+    IPromisingRequestHandler requestHandler = (req, data) -> {
+        System.out.println("Got stop request");
+        req.setResponse(new JSONObject().put("bye", true), 200);
+        new Thread(() -> {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            req.getManager().getConnection().connectionError();
+        }).start();
+    };
 
     /**
      * Starts the server and listens for incoming connections
      */
     public void start() {
         incomingThread = new Thread(() -> {
-            ServerSocket serverSocket;
-            try {
-                serverSocket = new ServerSocket(port);
+            try (ServerSocket serverSocket = new ServerSocket(port)) {
                 while (true) {
                     Socket socket = serverSocket.accept();
                     System.out.println("New connection from " + socket.getInetAddress().getHostAddress());
                     if (ConnectionHandler.getInstance().getRegisteredConnectionClasses().isEmpty()) {
                         Connection con = new ConnectionImpl(socket, this);
+                        con.getRequestHandler().registerPromisingHandler(RequestPing.class, pingHandler);
+                        handlers.forEach((clazz, handler) -> con.getRequestHandler().registerHandler(clazz, handler));
                         con.incoming();
                         con.outgoing();
                         con.timeout();
@@ -72,14 +81,18 @@ public class SocketServer implements NetInstance {
                                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                                 String line = reader.readLine();
                                 if (line != null) {
+                                    if (usesEncrytion()) {
+                                        line = decrypt(line);
+                                    }
                                     JSONObject jsonObject = new JSONObject(line);
                                     JSONObject data = jsonObject.getJSONObject("data");
 
                                     int id = jsonObject.getInt("id");
                                     Connection con = new ConnectionImpl(socket, this);
+                                    con.getRequestHandler().registerPromisingHandler(RequestPing.class, pingHandler);
                                     con.outgoing();
                                     Response fallback = con.getRequestManager().getRequest(Response.class, id);
-                                    requestHandler.handleRequest(con.getRequestManager().getRequest(RequestRegister.class, id), data);
+                                    con.getRequestHandler().handleRequest(con.getRequestManager().getRequest(RequestRegister.class, id), data);
                                     if (data.has("identifier")) {
                                         String identifier = data.getString("identifier");
                                         if (ConnectionHandler.getInstance().hasIdentifier(identifier)) {
@@ -89,6 +102,8 @@ public class SocketServer implements NetInstance {
                                                     .newInstance(socket, this);
                                             customCon.incoming();
                                             customCon.outgoing();
+                                            customCon.getRequestHandler().registerPromisingHandler(RequestPing.class, pingHandler);
+                                            handlers.forEach((clazz, handler) -> customCon.getRequestHandler().registerHandler(clazz, handler));
                                             Response res = customCon.getRequestManager().getRequest(Response.class, id);
                                             res.setStatus(200);
                                             res.setID(id);
@@ -122,16 +137,6 @@ public class SocketServer implements NetInstance {
     }
 
     /**
-     * Gets the request handler
-     *
-     * @return The request handler
-     * @apiNote The request handler is used to register requests and handle/modifiy them
-     */
-    public RequestHandler getRequestHandler() {
-        return requestHandler;
-    }
-
-    /**
      * Removes a connection from the list
      * @param con The connection to remove
      */
@@ -159,5 +164,37 @@ public class SocketServer implements NetInstance {
     public void notifyConnectionClosed(Connection con) {
         con.end();
         System.out.println("Connection closed: " + con.getSocket().getInetAddress().getHostAddress());
+    }
+
+
+    @Override
+    public byte[] encryptionKey() {
+        return encryptionKey;
+    }
+
+    @Override
+    public void setEncryptionKey(byte[] key) {
+        this.encryptionKey = key;
+    }
+
+    @Override
+    public void stop() {
+        stopped = true;
+        for (Connection con : connections) {
+            con.end();
+        }
+    }
+
+    @Override
+    public boolean stopped() {
+        return stopped;
+    }
+
+    public void registerHandler(Class<? extends Request> requestClass, IRequestHandler handler) {
+        handlers.put(requestClass, handler);
+    }
+
+    public void registerPromisingHandler(Class<? extends RequestPromising> req, IPromisingRequestHandler handler) {
+        handlers.put(req, handler);
     }
 }

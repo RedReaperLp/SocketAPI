@@ -1,5 +1,6 @@
 package com.github.redreaperlp.socketapi.communication;
 
+import com.github.redreaperlp.socketapi.communication.handler.RequestHandler;
 import com.github.redreaperlp.socketapi.communication.request.Request;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestPing;
 import com.github.redreaperlp.socketapi.communication.request.special.RequestPromising;
@@ -23,6 +24,7 @@ public abstract class Connection {
     private Thread timeoutThread;
     private Thread pingThread;
     private final RequestManager requestManager;
+    private final RequestHandler requestHandler = new RequestHandler();
     public final List<RequestPromising> pendingResponses = new ArrayList<>();
     private final List<Request> requestQueue = new ArrayList<>();
     private long pingInterval = 100;
@@ -30,6 +32,7 @@ public abstract class Connection {
     public Connection(Socket socket, NetInstance netInstance) {
         this.socket = socket;
         this.netInstance = netInstance;
+        registerHandlers();
         requestManager = new RequestManager(netInstance);
         requestManager.setConnection(this);
         try {
@@ -47,12 +50,6 @@ public abstract class Connection {
     public BufferedWriter getWriter() {
         return writer;
     }
-
-    /*
-    public boolean isAlive() {
-        return
-    }
-    */
 
     public void end(boolean endSocket) {
         System.out.println(requestQueue.size() + " requests left in queue");
@@ -93,6 +90,9 @@ public abstract class Connection {
                 try {
                     String line = reader.readLine();
                     if (line != null) {
+                        if (netInstance.usesEncrytion()) {
+                            line = netInstance.decrypt(line);
+                        }
                         JSONObject jsonObject = new JSONObject(line);
                         resolve(jsonObject);
                     }
@@ -134,7 +134,12 @@ public abstract class Connection {
                         jsonObject.put("data", request.getData());
                     }
                     try {
-                        writer.write(jsonObject.toString());
+
+                        if (netInstance.usesEncrytion()) {
+                            writer.write(netInstance.encrypt(jsonObject.toString()));
+                        } else {
+                            writer.write(jsonObject.toString());
+                        }
                         writer.newLine();
                         writer.flush();
                     } catch (IOException e) {
@@ -226,7 +231,7 @@ public abstract class Connection {
                 synchronized (pendingResponses) {
                     for (RequestPromising promising : pendingResponses) {
                         if (promising.getId() == id) {
-                            netInstance.getRequestHandler().handleRequest(promising, data);
+                            getRequestHandler().handleRequest(promising, data);
                             promising.setResponse(data == null ? new JSONObject() : data);
                             promising.validateResponse();
                             promising.done();
@@ -239,7 +244,7 @@ public abstract class Connection {
                 String type = jsonObject.getString("type");
                 Request s = getRequestManager().getRequest(type, jsonObject.getLong("id"));
                 if (s instanceof RequestPromising promising) {
-                    netInstance.getRequestHandler().handleRequest(promising, jsonObject.has("data")? jsonObject.getJSONObject("data") : new JSONObject());
+                    getRequestHandler().handleRequest(promising, jsonObject.has("data") ? jsonObject.getJSONObject("data") : new JSONObject());
                     promising.validateRequest();
                     promising.getResponse().queue();
                 }
@@ -292,7 +297,7 @@ public abstract class Connection {
             requestQueue.notifyAll();
         }
     }
-    
+
     public Socket getSocket() {
         return socket;
     }
@@ -312,4 +317,10 @@ public abstract class Connection {
     public void setPingInterval(long pingInterval) {
         this.pingInterval = pingInterval;
     }
+
+    public RequestHandler getRequestHandler() {
+        return requestHandler;
+    }
+
+    protected abstract void registerHandlers();
 }
