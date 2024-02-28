@@ -49,12 +49,9 @@ publishing {
     }
 }
 
-
-if (!project.version.toString().contains("SNAPSHOT")) {
-    java {
-        withSourcesJar()
-        withJavadocJar()
-    }
+java {
+    withSourcesJar()
+    withJavadocJar()
 }
 
 tasks.withType<Javadoc>().configureEach() {
