@@ -13,12 +13,16 @@
         - [Maven:](#maven)
     - [Dependencies](#dependencies)
     - [Usage](#usage)
-        - [Requests](#requests)
-            - [Initializing a Server](#initializing-a-server)
-            - [Initializing a Client](#initializing-a-client)
-            - [Creating a responding Request](#creating-a-responding-request)
-            - [Creating a non-responding Request](#creating-a-non-responding-request)
-            - [Sending a Request](#sending-a-request)
+        - [Initializing a Server](#initializing-a-server)
+        - [Initializing a Client](#initializing-a-client)
+            - [Requests](#requests)
+                - [Creating a responding Request](#creating-a-responding-request)
+                - [Creating a non-responding Request](#creating-a-non-responding-request)
+                - [Registering a Request](#registering-a-request)
+                - [Handling a Request](#handling-a-request)
+                - [Sending a Request](#sending-a-request)
+            - [Custom Connection classes](#custom-connection-classes)
+                - [Registering a Custom Connection class](#registering-a-custom-connection-class)
     - [License](#license)
 
 ## Introduction
@@ -52,17 +56,17 @@ dependencies {
 
 <project>
   ...
-  <repositories>
-    <repository>
-      <id>eldonexus</id>
-      <url>https://eldonexus.de/repository/maven-public/</url>
-    </repository>
-  </repositories>
-  <dependency>
-    <groupId>com.github.redreaperlp</groupId>
-    <artifactId>socketapi</artifactId>
-    <version>version</version>
-  </dependency>
+	<repositories>
+		<repository>
+			<id>eldonexus</id>
+			<url>https://eldonexus.de/repository/maven-public/</url>
+		</repository>
+	</repositories>
+	<dependency>
+		<groupId>com.github.redreaperlp</groupId>
+		<artifactId>socketapi</artifactId>
+		<version>1.0</version>
+	</dependency>
 </project>
 ```
 
@@ -158,6 +162,10 @@ public static void main(String[] args) {
   example below
     - [SocketServer](#initializing-a-server) and [SocketClient](#initializing-a-client) both extend the
       [NetInstance](src/main/java/com/github/redreaperlp/socketapi/ns/NetInstance.java) class
+- Encrypted communication is also possible, you can use
+  the [useEncryption()](src/main/java/com/github/redreaperlp/socketapi/ns/NetInstance.java#L23) method to specify a key
+    - Note: The key has to be the same for the server and the client, the best way is to manually set it in the
+      configuration of your application
 
 ```java
 public static void main(String[] args) {
@@ -165,11 +173,17 @@ public static void main(String[] args) {
     //or
     SocketClient client = new SocketClient(host, port);
 
+    //optionally you can specify an encryption key
+    server.useEncryption("key");
+    client.useEncryption("key");
+
     //here we register the handler for the request
-    server.getRequestHandler().registerPromisingHandler(RequestPing.class, (req, data) -> {
+    server.registerPromisingHandler(RequestPing.class, (req, data) -> {
         //here you can handle the request, the data is the data that was sent with the request
         //the req is the request itself (here RequestPing so you can access all fields and methods of the request)
     });
+    //for servers, these handlers are applied to all clients, 
+    //if you want to handle a request for a specific type of client, you have to create a new Custom Connection class
 }
 ```
 
@@ -243,9 +257,49 @@ public class RequestPlayerMoved extends RequestPromising {
 }
 ```
 
+## Custom Connection classes
+
+- These are used to have connections with different handlers, for instance, you have a Minecraft Server with Proxy and
+  Games, on the Proxy you want to handle each game differently
+    - Normally you would have to write a complex logic to determine which game is sending the request and then handle it
+      accordingly, this is where Custom Connection classes come into play
+- You can create a Custom Connection class by extending
+  the [Connection](src/main/java/com/github/redreaperlp/socketapi/communication/Connection.java) class
+
+```java
+public class GameConnection extends Connection {
+    public GameConnection(Socket socket, SocketServer server) {
+        super(socket, server);
+    }
+
+    @Override
+    public void registerHandlers() { // Here you can register the handlers for the specific connection and requests
+        getRequestHandler().registerPromisingHandler(RequestPlayerMoved.class, (req, data) -> {
+            //handle the request
+        });
+    }
+}
+```
+
+#### Registering a Custom Connection class
+
+- You can register a Custom Connection class by calling
+  the [registerCustomConnection()](src/main/java/com/github/redreaperlp/socketapi/ns/ConnectionHandler.java#L31) method
+- The first parameter is the name of the connection, the second parameter is the class of the connection
+- Note: If you have registered at least one Custom Connection class, you have to specify one of your created classes,
+  otherwise the server will reject the
+  connection [client.setConnectionIdentifier(String name)](src/main/java/com/github/redreaperlp/socketapi/ns/client/SocketClient.java#L55)
+
+```java
+public void start() {
+    ConnectionHandler h = ConnectionHandler.getInstance(); //This is singleton so you can call it from anywhere
+    h.registerCustomConnection("name", GameConnection.class);
+}
+```
+
 ### Planned Features:
-- [ ] Use a secure connection (SSL or Custom)
-- 
+
+- [x] Use a secure connection (Custom)
 
 ## License
 

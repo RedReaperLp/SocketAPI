@@ -2,37 +2,54 @@ package com.github.redreaperlp.socketapi.ns.client;
 
 import com.github.redreaperlp.socketapi.communication.Connection;
 import com.github.redreaperlp.socketapi.communication.ConnectionImpl;
-import com.github.redreaperlp.socketapi.communication.handler.RequestHandler;
+import com.github.redreaperlp.socketapi.communication.handler.IPromisingRequestHandler;
+import com.github.redreaperlp.socketapi.communication.handler.IReqHandler;
+import com.github.redreaperlp.socketapi.communication.handler.IRequestHandler;
 import com.github.redreaperlp.socketapi.communication.request.Request;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestRegister;
 import com.github.redreaperlp.socketapi.communication.request.requests.RequestStop;
 import com.github.redreaperlp.socketapi.communication.response.Response;
-import com.github.redreaperlp.socketapi.event.ConnectionHandler;
 import com.github.redreaperlp.socketapi.ns.NetInstance;
-import com.github.redreaperlp.socketapi.ns.server.SocketServer;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 
 public class SocketClient implements NetInstance {
-    private int port;
-    private String ip;
+    private final int port;
+    private final String ip;
     private Connection con;
-    private RequestHandler requestHandler = new RequestHandler();
-
-    private Object connectionErrorLock = new Object();
-    private Thread connectionErrorThread;
+    private final Object connectionErrorLock = new Object();
+    private final Thread connectionErrorThread;
 
     private String connectionIdentifier;
+    private boolean stopped = false;
+
+    private final Map<Class<? extends Request>, IReqHandler> handlers = new HashMap<>();
+
+    private byte[] encryptionKey;
 
     public SocketClient(String ip, int port) {
         this.ip = ip;
         this.port = port;
-        registerHandlers();
         connectionErrorThread = new Thread(this::onConnectionError);
         connectionErrorThread.setName("ConnectionErrorThread");
         connectionErrorThread.start();
+
+        handlers.put(RequestRegister.class, (IPromisingRequestHandler) (req, data) -> {
+            if (req.getManager().getNetInstance() instanceof SocketClient client) {
+                if (data == null) {
+                    req.setResponse(new JSONObject().put("success", false).put("reason", "no data"), 400);
+                    return;
+                }
+                if (data.getBoolean("success")) {
+                    client.setConnectionIdentifier(data.getString("identifier"));
+                }
+                req.setResponse(new JSONObject().put("success", true), 200);
+            }
+        });
     }
 
     public void setConnectionIdentifier(String connectionIdentifier) {
@@ -51,13 +68,13 @@ public class SocketClient implements NetInstance {
             req.setConnectionIdentifier(connectionIdentifier);
             req.complete();
             if (req.failed() != 200) {
-                System.out.println("Failed to register: " + req.getResponse().getData().getString("reason"));
                 return false;
             }
+            registerHandlers();
             con.ping();
         } catch (IOException e) {
             System.out.println("Failed to connect to " + ip + ":" + port);
-            e.printStackTrace();
+            System.out.println("Reason: " + e.getMessage());
             return false;
         }
         return true;
@@ -91,8 +108,13 @@ public class SocketClient implements NetInstance {
         }
     }
 
+    /**
+     * Stops the client and sends a stop request to the server, when the server responds, the connection is closed
+     */
+    @Override
     public void stop() {
         Response res = getRequest(RequestStop.class).complete();
+        stopped = true;
         if (connectionErrorThread != null && connectionErrorThread.isAlive()) connectionErrorThread.interrupt();
         con.end();
     }
@@ -145,26 +167,8 @@ public class SocketClient implements NetInstance {
         return con.getRequestManager().getRequest(name, id);
     }
 
-    @Override
-    public RequestHandler getRequestHandler() {
-        return requestHandler;
-    }
-
     public void registerHandlers() {
-        requestHandler.registerPromisingHandler(RequestRegister.class, (req, data) -> {
-            if (req.getManager().getNetInstance() instanceof SocketServer server) {
-                if (data == null) {
-                    req.setResponse(new JSONObject().put("success", false).put("reason", "no data"), 400);
-                    return;
-                }
-                if (!ConnectionHandler.getInstance().getRegisteredConnectionClasses().isEmpty()) {
-                    if (!ConnectionHandler.getInstance().hasIdentifier(data.get("identifier").toString())) {
-                        req.setResponse(new JSONObject().put("success", false).put("reason", "identifier not found"), 404);
-                    }
-                }
-                req.setResponse(new JSONObject().put("success", true), 200);
-            }
-        });
+        handlers.forEach((clazz, handler) -> con.getRequestHandler().registerHandler(clazz, handler));
     }
 
     @Override
@@ -173,4 +177,28 @@ public class SocketClient implements NetInstance {
             connectionErrorLock.notifyAll();
         }
     }
+
+    @Override
+    public byte[] encryptionKey() {
+        return encryptionKey;
+    }
+
+    @Override
+    public void setEncryptionKey(byte[] key) {
+        this.encryptionKey = key;
+    }
+
+    @Override
+    public boolean stopped() {
+        return stopped;
+    }
+
+    public void registerRequestHandler(Class<? extends Request> clazz, IRequestHandler handler) {
+        handlers.put(clazz, handler);
+    }
+
+    public void registerPromisingRequestHandler(Class<? extends Request> clazz, IPromisingRequestHandler handler) {
+        handlers.put(clazz, handler);
+    }
+
 }
